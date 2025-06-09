@@ -89,4 +89,6 @@ const FileUploader = forwardRef(
   }
 );
 
+FileUploader.displayName = "FileUploader";
+
 export default FileUploader;

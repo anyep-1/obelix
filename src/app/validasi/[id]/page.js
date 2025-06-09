@@ -216,10 +216,12 @@ const ValidasiDetail = () => {
                     </td>
                     <td className="border border-black p-2">
                       <p>
-                        <strong>Kendala:</strong> {rt.kendala}
+                        <strong>Kendala:</strong>{" "}
+                        {rt.kendala.replace(/'/g, "’").replace(/"/g, "”")}
                       </p>
                       <p>
-                        <strong>Solusi:</strong> {rt.solusi}
+                        <strong>Solusi:</strong>{" "}
+                        {rt.solusi.replace(/'/g, "’").replace(/"/g, "”")}
                       </p>
                     </td>
                   </tr>
