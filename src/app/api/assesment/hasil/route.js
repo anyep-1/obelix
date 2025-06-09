@@ -34,24 +34,25 @@ export async function GET(request) {
       sks: entry.tb_matkul?.jumlah_sks || 0,
       tingkat: entry.tb_matkul?.tingkat || "Unknown",
       semester: entry.tb_matkul?.semester || "Unknown",
-      clo:
-        entry.tb_matkul?.tb_clo?.map((clo) => ({
-          id: clo.clo_id,
-          nama: clo.nama_clo,
-          plo: clo.tb_plo
-            ? {
-                id: clo.tb_plo.plo_id,
-                nama: clo.tb_plo.nama_plo,
-              }
-            : null,
-          pi: clo.tb_pi
-            ? {
-                id: clo.tb_pi.pi_id,
-                deskripsi: clo.tb_pi.deskripsi_pi,
-                nomor: clo.tb_pi.nomor_pi,
-              }
-            : null,
-        })) || [], // Pastikan ini array
+      clo: Array.isArray(entry.tb_matkul?.tb_clo)
+        ? entry.tb_matkul.tb_clo.map((clo) => ({
+            id: clo.clo_id,
+            nama: clo.nama_clo,
+            plo: clo.tb_plo
+              ? {
+                  id: clo.tb_plo.plo_id,
+                  nama: clo.tb_plo.nama_plo,
+                }
+              : null,
+            pi: clo.tb_pi
+              ? {
+                  id: clo.tb_pi.pi_id,
+                  deskripsi: clo.tb_pi.deskripsi_pi,
+                  nomor: clo.tb_pi.nomor_pi,
+                }
+              : null,
+          }))
+        : [],
     }));
 
     return new Response(
