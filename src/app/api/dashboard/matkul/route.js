@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; // pastikan ini path prisma kamu
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const total = await prisma.tb_matkul.count();
