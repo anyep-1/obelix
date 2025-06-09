@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Handle GET request (Ambil CLO berdasarkan pi_id)
 export async function GET(request) {
   try {

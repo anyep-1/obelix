@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma"; // pastikan path sesuai
 
+export const dynamic = "force-dynamic";
+
 export async function PATCH(request, { params }) {
   try {
     const { rt_id } = params;

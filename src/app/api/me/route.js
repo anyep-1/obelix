@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key";
 
 export async function GET() {

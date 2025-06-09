@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Menangani permintaan POST untuk menambahkan pemetaan PLO dengan profil lulusan
 export async function POST(req) {
   const { ploId, profilId } = await req.json();

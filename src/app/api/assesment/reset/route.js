@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+export const dynamic = "force-dynamic";
 
 // Named export for DELETE method
 export async function DELETE(req) {

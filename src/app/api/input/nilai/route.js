@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 
 async function getUserFromToken() {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // Fungsi untuk mencari kategori berdasarkan skor dan rubrik
 function cariKategori(skor, rubrikKategori) {
   for (const [namaKategori, info] of Object.entries(rubrikKategori)) {

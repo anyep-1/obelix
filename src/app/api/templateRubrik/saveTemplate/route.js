@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export const POST = async (req) => {
   try {
     const body = await req.json();

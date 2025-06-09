@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export const POST = async (req) => {
   try {
     const { template_id } = await req.json();

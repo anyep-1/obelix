@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export async function GET() {

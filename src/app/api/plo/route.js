@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 // Handle POST request
 export async function POST(req) {
   const { namaPLO, kurikulumId, no_urut } = await req.json();
