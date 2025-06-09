@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
 
 // Menangani permintaan POST untuk menambahkan pemetaan PLO dengan profil lulusan
 export async function POST(req) {
