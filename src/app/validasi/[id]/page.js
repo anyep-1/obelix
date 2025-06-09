@@ -51,7 +51,7 @@ const ValidasiDetail = () => {
         margin: 0.5,
         filename: `report-monev-${id}.pdf`,
         html2canvas: { scale: 2 },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
       })
       .save();
