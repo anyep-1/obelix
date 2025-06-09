@@ -132,10 +132,14 @@ const ValidasiDetail = () => {
               <tbody>
                 <tr>
                   <td className="border border-black p-2">
-                    {monev.tujuanEvaluasi}
+                    {monev.tujuanEvaluasi
+                      ?.replace(/"/g, "”")
+                      .replace(/'/g, "’")}
                   </td>
                   <td className="border border-black p-2">
-                    {monev.metodeEvaluasi}
+                    {monev.metodeEvaluasi
+                      ?.replace(/"/g, "”")
+                      .replace(/'/g, "’")}
                   </td>
                 </tr>
               </tbody>
