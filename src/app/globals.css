@@ -2,12 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "flowbite";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: white) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -24,4 +26,28 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+@media print {
+  /* Pastikan kontainer #to-pdf fixed A4 width */
+  #to-pdf {
+    width: 8.27in !important;
+    font-size: 10pt !important;
+    line-height: 1.2 !important;
+  }
+  /* Tabel agar border-collapse & full-width */
+  #to-pdf table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  /* Sel tabel tegas & padding rapih */
+  #to-pdf th,
+  #to-pdf td {
+    border: 1px solid #000 !important;
+    padding: 4px !important;
+  }
+}
+
+.page-break {
+  page-break-after: always;
 }
