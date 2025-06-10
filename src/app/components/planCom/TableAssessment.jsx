@@ -1,16 +1,19 @@
 import React from "react";
 
-const TableAssessment = ({ ploData, matkulData }) => {
-  const groupedMatkul = matkulData.reduce((acc, matkul) => {
-    if (!matkul.tingkat || !matkul.semester) return acc;
-    if (!acc[matkul.tingkat]) acc[matkul.tingkat] = { ganjil: [], genap: [] };
-    if (matkul.semester.toLowerCase() === "ganjil") {
-      acc[matkul.tingkat].ganjil.push(matkul);
-    } else if (matkul.semester.toLowerCase() === "genap") {
-      acc[matkul.tingkat].genap.push(matkul);
-    }
-    return acc;
-  }, {});
+const TableAssessment = ({ ploData, filteredPloData }) => {
+  const getGroupedMatkul = (matkulList) => {
+    return matkulList.reduce((acc, matkul) => {
+      if (!matkul.tingkat || !matkul.semester) return acc;
+      if (!acc[matkul.tingkat]) acc[matkul.tingkat] = { ganjil: [], genap: [] };
+      const semester = matkul.semester.toLowerCase();
+      if (semester === "ganjil") {
+        acc[matkul.tingkat].ganjil.push(matkul);
+      } else if (semester === "genap") {
+        acc[matkul.tingkat].genap.push(matkul);
+      }
+      return acc;
+    }, {});
+  };
 
   return (
     <div className="overflow-x-auto">
@@ -29,7 +32,13 @@ const TableAssessment = ({ ploData, matkulData }) => {
             <th rowSpan={2} className="border px-4 py-2 text-left">
               Deskripsi PI
             </th>
-            {Object.keys(groupedMatkul).map((tingkat) => (
+            {[
+              ...new Set(
+                ploData.flatMap((plo) =>
+                  plo.matkul.map((m) => m.tingkat).filter(Boolean)
+                )
+              ),
+            ].map((tingkat) => (
               <th
                 key={tingkat}
                 colSpan={2}
@@ -40,7 +49,13 @@ const TableAssessment = ({ ploData, matkulData }) => {
             ))}
           </tr>
           <tr className="bg-gray-100 text-sm">
-            {Object.keys(groupedMatkul).flatMap((tingkat) => [
+            {[
+              ...new Set(
+                ploData.flatMap((plo) =>
+                  plo.matkul.map((m) => m.tingkat).filter(Boolean)
+                )
+              ),
+            ].flatMap((tingkat) => [
               <th key={`${tingkat}-ganjil`} className="border px-4 py-2">
                 Ganjil
               </th>,
@@ -51,95 +66,104 @@ const TableAssessment = ({ ploData, matkulData }) => {
           </tr>
         </thead>
         <tbody>
-          {ploData
-            .map((plo, ploIndex) => {
-              const cloPis = [];
-              Object.keys(groupedMatkul).forEach((tingkat) => {
-                groupedMatkul[tingkat].ganjil.forEach((matkul) => {
-                  cloPis.push(
-                    ...matkul.clo.filter(
-                      (clo) => clo.plo?.id === plo.plo_id && clo.pi
-                    )
+          {ploData.map((plo, idxPlo) => {
+            const groupedMatkul = getGroupedMatkul(plo.matkul);
+
+            const cloPis = [];
+            Object.values(groupedMatkul).forEach((semesterGroup) => {
+              ["ganjil", "genap"].forEach((sem) => {
+                semesterGroup[sem].forEach((matkul) => {
+                  if (!Array.isArray(matkul.clo)) {
+                    console.warn(
+                      `🚨 [${idxPlo}] matkul.clo bukan array:`,
+                      matkul
+                    );
+                    return;
+                  }
+                  const filtered = matkul.clo.filter(
+                    (clo) => clo.pi && clo.pi?.plo_id === plo.plo_id
                   );
-                });
-                groupedMatkul[tingkat].genap.forEach((matkul) => {
-                  cloPis.push(
-                    ...matkul.clo.filter(
-                      (clo) => clo.plo?.id === plo.plo_id && clo.pi
-                    )
-                  );
+                  if (filtered.length > 0) {
+                    console.log(
+                      `✅ [${idxPlo}] Ditemukan CLO terkait PLO:`,
+                      filtered
+                    );
+                  }
+                  cloPis.push(...filtered);
                 });
               });
+            });
 
-              if (cloPis.length === 0) return null;
+            if (cloPis.length === 0) {
+              console.warn(
+                `⚠️ [${idxPlo}] Tidak ada CLO yang cocok dengan PLO ${plo.plo_id}`
+              );
+              return null;
+            }
 
-              return cloPis.map((cloPi, index) => (
-                <tr
-                  key={`${plo.plo_id}-${cloPi.pi.id}-${index}`}
-                  className="hover:bg-gray-50"
-                >
-                  {index === 0 && (
-                    <>
-                      <td
-                        rowSpan={cloPis.length}
-                        className="border px-4 py-2 text-center bg-gray-50"
-                      >
-                        {plo.nomor_plo}
-                      </td>
-                      <td
-                        rowSpan={cloPis.length}
-                        className="border px-4 py-2 bg-gray-50"
-                      >
-                        {plo.nama_plo}
-                      </td>
-                    </>
-                  )}
-                  <td className="border px-4 py-2 text-center">
-                    {cloPi.pi.nomor}
-                  </td>
-                  <td className="border px-4 py-2">{cloPi.pi.deskripsi}</td>
-                  {Object.keys(groupedMatkul).flatMap((tingkat) => [
+            return cloPis.map((cloPi, index) => (
+              <tr
+                key={`${plo.plo_id}-${cloPi.pi.id}-${index}`}
+                className="hover:bg-gray-50"
+              >
+                {index === 0 && (
+                  <>
                     <td
-                      key={`${plo.plo_id}-${tingkat}-ganjil-${cloPi.pi.id}`}
-                      className="border px-4 py-2"
+                      rowSpan={cloPis.length}
+                      className="border px-4 py-2 text-center bg-gray-50"
                     >
-                      {groupedMatkul[tingkat].ganjil
-                        .filter((matkul) =>
-                          matkul.clo.some(
-                            (clo) =>
-                              clo.plo?.id === plo.plo_id &&
-                              clo.pi?.id === cloPi.pi.id
-                          )
-                        )
-                        .map((matkul) => (
-                          <div key={matkul.id} className="text-sm">
-                            {matkul.nama}
-                          </div>
-                        )) || "-"}
-                    </td>,
+                      {plo.nomor_plo}
+                    </td>
                     <td
-                      key={`${plo.plo_id}-${tingkat}-genap-${cloPi.pi.id}`}
-                      className="border px-4 py-2"
+                      rowSpan={cloPis.length}
+                      className="border px-4 py-2 bg-gray-50"
                     >
-                      {groupedMatkul[tingkat].genap
-                        .filter((matkul) =>
-                          matkul.clo.some(
-                            (clo) =>
-                              clo.plo?.id === plo.plo_id &&
-                              clo.pi?.id === cloPi.pi.id
-                          )
-                        )
-                        .map((matkul) => (
-                          <div key={matkul.id} className="text-sm">
-                            {matkul.nama}
-                          </div>
-                        )) || "-"}
-                    </td>,
-                  ])}
-                </tr>
-              ));
-            })
-            .filter(Boolean)}
+                      {plo.nama_plo}
+                    </td>
+                  </>
+                )}
+                <td className="border px-4 py-2 text-center">
+                  {cloPi.pi.nomor}
+                </td>
+                <td className="border px-4 py-2">{cloPi.pi.deskripsi}</td>
+
+                {Object.keys(groupedMatkul).flatMap((tingkat) => [
+                  <td
+                    key={`${tingkat}-ganjil-${cloPi.pi.id}`}
+                    className="border px-4 py-2"
+                  >
+                    {groupedMatkul[tingkat].ganjil
+                      .filter((matkul) =>
+                        matkul.clo
+                          .filter((clo) => clo.plo?.id === plo.plo_id)
+                          .some((clo) => clo.pi?.id === cloPi.pi.id)
+                      )
+                      .map((matkul) => (
+                        <div key={matkul.id} className="text-sm">
+                          {matkul.nama}
+                        </div>
+                      ))}
+                  </td>,
+                  <td
+                    key={`${tingkat}-genap-${cloPi.pi.id}`}
+                    className="border px-4 py-2"
+                  >
+                    {groupedMatkul[tingkat].genap
+                      .filter((matkul) =>
+                        matkul.clo
+                          .filter((clo) => clo.plo?.id === plo.plo_id)
+                          .some((clo) => clo.pi?.id === cloPi.pi.id)
+                      )
+                      .map((matkul) => (
+                        <div key={matkul.id} className="text-sm">
+                          {matkul.nama}
+                        </div>
+                      ))}
+                  </td>,
+                ])}
+              </tr>
+            ));
+          })}
         </tbody>
       </table>
     </div>

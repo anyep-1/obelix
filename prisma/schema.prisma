@@ -34,6 +34,7 @@ model tb_plo {
   tb_pi              tb_pi[]
   tb_kurikulum       tb_kurikulum         @relation(fields: [kurikulum_id], references: [kurikulum_id])
   tb_plo_profil      tb_plo_profil[]
+  tb_selected_matkul tb_selected_matkul[]
   tb_skor_plo        tb_skor_plo?
   tb_template_rubrik tb_template_rubrik[]
 }
@@ -167,6 +168,8 @@ model tb_selected_matkul {
   id        Int       @id @default(autoincrement())
   matkul_id Int
   selected  Boolean   @default(false)
+  plo_id    Int?
+  tb_plo    tb_plo?   @relation(fields: [plo_id], references: [plo_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_plo_id")
   tb_matkul tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
 }
 

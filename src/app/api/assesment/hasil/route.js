@@ -1,76 +1,87 @@
-export const dynamic = "force-dynamic";
 import prisma from "@/lib/prisma";
+export const dynamic = "force-dynamic";
 
-export async function GET(request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const year = searchParams.get("year");
-
-    // Ambil data yang dipilih dari tb_selected_matkul
     const selectedData = await prisma.tb_selected_matkul.findMany({
-      where: { selected: true },
+      where: {
+        selected: true,
+      },
       include: {
         tb_matkul: {
           include: {
             tb_clo: {
               include: {
-                tb_plo: true, // PLO yang terkait
-                tb_pi: true, // PI jika diperlukan
+                tb_pi: true,
+                tb_plo: true,
               },
             },
           },
         },
+        tb_plo: true,
       },
     });
 
-    // Ambil semua PLO yang ada
-    const ploData = await prisma.tb_plo.findMany();
+    const grouped = new Map();
 
-    // Strukturkan data untuk dikembalikan
-    const responseData = selectedData.map((entry) => ({
-      id: entry.tb_matkul?.matkul_id || null,
-      nama: entry.tb_matkul?.nama_matkul || "Unknown",
-      kode: entry.tb_matkul?.kode_matkul || "N/A",
-      sks: entry.tb_matkul?.jumlah_sks || 0,
-      tingkat: entry.tb_matkul?.tingkat || "Unknown",
-      semester: entry.tb_matkul?.semester || "Unknown",
-      clo: Array.isArray(entry.tb_matkul?.tb_clo)
-        ? entry.tb_matkul.tb_clo.map((clo) => ({
+    selectedData.forEach((entry) => {
+      const plo = entry.tb_plo;
+      const matkul = entry.tb_matkul;
+
+      if (!plo || !matkul) return;
+
+      if (!grouped.has(plo.plo_id)) {
+        grouped.set(plo.plo_id, {
+          plo_id: plo.plo_id,
+          nomor_plo: plo.nomor_plo,
+          nama_plo: plo.nama_plo,
+          matkul: [],
+        });
+      }
+
+      const group = grouped.get(plo.plo_id);
+      group.matkul.push({
+        id: matkul.matkul_id,
+        nama: matkul.nama_matkul,
+        kode: matkul.kode_matkul,
+        jumlah_sks: matkul.jumlah_sks,
+        tingkat: matkul.tingkat,
+        semester: matkul.semester,
+        clo:
+          matkul.tb_clo?.map((clo) => ({
             id: clo.clo_id,
-            nama: clo.nama_clo,
-            plo: clo.tb_plo
-              ? {
-                  id: clo.tb_plo.plo_id,
-                  nama: clo.tb_plo.nama_plo,
-                }
-              : null,
+            deskripsi: clo.nama_clo,
             pi: clo.tb_pi
               ? {
                   id: clo.tb_pi.pi_id,
-                  deskripsi: clo.tb_pi.deskripsi_pi,
                   nomor: clo.tb_pi.nomor_pi,
+                  deskripsi: clo.tb_pi.deskripsi_pi,
+                  plo_id: clo.tb_pi.plo_id,
                 }
               : null,
-          }))
-        : [],
-    }));
+            plo: clo.tb_plo
+              ? {
+                  id: clo.tb_plo.plo_id,
+                  nomor: clo.tb_plo.nomor_plo,
+                  nama: clo.tb_plo.nama_plo,
+                }
+              : null,
+          })) || [],
+      });
+    });
 
     return new Response(
-      JSON.stringify({ ploData, selectedData: responseData }),
+      JSON.stringify({ data: Array.from(grouped.values()) }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Error fetching data:", error);
-    return new Response(JSON.stringify({ error: "Failed to fetch data" }), {
-      status: 500,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    console.error("Error saat mengambil data assessment hasil:", error);
+    return new Response(
+      JSON.stringify({ error: "Gagal mengambil data assessment hasil" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 }

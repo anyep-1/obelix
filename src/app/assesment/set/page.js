@@ -8,7 +8,7 @@ import LoadingSpinner from "@/app/components/utilities/LoadingSpinner";
 
 const AssessmentSet = () => {
   const [matkulList, setMatkulList] = useState([]);
-  const [selectedMatkul, setSelectedMatkul] = useState([]); // array id matkul yang diceklis
+  const [selectedMatkul, setSelectedMatkul] = useState([]); // array of { plo_id, matkul_id }
   const [loading, setLoading] = useState(true);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -20,12 +20,20 @@ const AssessmentSet = () => {
       try {
         const response = await axios.get("/api/assesment/set");
         const data = response.data.data;
+
         setMatkulList(data);
-        // Inisialisasi selectedMatkul berdasarkan data yang sudah dipilih di backend
-        const selectedIds = data
-          .filter((m) => m.isSelected)
-          .map((m) => m.matkul_id);
-        setSelectedMatkul(selectedIds);
+
+        // Ambil selected dari masing-masing PLO
+        const selected = data.flatMap((plo) =>
+          plo.matkul
+            .filter((m) => m.isSelected)
+            .map((m) => ({
+              plo_id: plo.plo_id,
+              matkul_id: m.matkul_id,
+            }))
+        );
+
+        setSelectedMatkul(selected);
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error.response || error.message);
@@ -36,11 +44,22 @@ const AssessmentSet = () => {
     fetchData();
   }, []);
 
-  const handleMatkulSelection = (event, matkulId) => {
+  const isChecked = (ploId, matkulId) =>
+    selectedMatkul.some(
+      (item) => item.plo_id === ploId && item.matkul_id === matkulId
+    );
+
+  const handleMatkulSelection = (event, ploId, matkulId) => {
+    const key = { plo_id: ploId, matkul_id: matkulId };
+
     if (event.target.checked) {
-      setSelectedMatkul((prev) => [...prev, matkulId]);
+      setSelectedMatkul((prev) => [...prev, key]);
     } else {
-      setSelectedMatkul((prev) => prev.filter((id) => id !== matkulId));
+      setSelectedMatkul((prev) =>
+        prev.filter(
+          (item) => !(item.plo_id === ploId && item.matkul_id === matkulId)
+        )
+      );
     }
   };
 
@@ -77,44 +96,44 @@ const AssessmentSet = () => {
     );
   }
 
-  const groupedData = matkulList.reduce((acc, matkul) => {
-    const key = `Semester ${matkul.semester} - ${matkul.tingkat}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(matkul);
-    return acc;
-  }, {});
+  // Urutkan berdasarkan nomor_plo numerik
+  const sortedData = [...matkulList].sort(
+    (a, b) => Number(a.nomor_plo) - Number(b.nomor_plo)
+  );
 
   return (
     <div className="pl-8 pr-8 pt-12 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">
-        📚 Daftar Mata Kuliah Assessment Plan
+        📚 Daftar Mata Kuliah Assessment Plan per PLO
       </h1>
 
-      {Object.keys(groupedData).map((key) => (
-        <div key={key} className="mb-4">
+      {sortedData.map((plo) => (
+        <div key={plo.plo_id} className="mb-6">
           <h2 className="text-lg font-semibold text-gray-700 border-l-4 border-blue-500 pl-3">
-            {key}
+            PLO {plo.nomor_plo}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-3">
-            {groupedData[key].map((matkul) => (
+            {plo.matkul.map((matkul) => (
               <label
-                key={matkul.matkul_id}
+                key={`${plo.plo_id}-${matkul.matkul_id}`}
                 className="flex items-center gap-3 bg-white shadow-sm rounded-lg p-4 border hover:border-blue-400 transition-all cursor-pointer"
               >
                 <input
                   type="checkbox"
                   className="hidden"
-                  checked={selectedMatkul.includes(matkul.matkul_id)}
-                  onChange={(e) => handleMatkulSelection(e, matkul.matkul_id)}
+                  checked={isChecked(plo.plo_id, matkul.matkul_id)}
+                  onChange={(e) =>
+                    handleMatkulSelection(e, plo.plo_id, matkul.matkul_id)
+                  }
                 />
                 <div
                   className={`w-5 h-5 border-2 rounded-md ${
-                    selectedMatkul.includes(matkul.matkul_id)
+                    isChecked(plo.plo_id, matkul.matkul_id)
                       ? "bg-blue-500 border-blue-500"
                       : "border-gray-400"
                   } flex items-center justify-center`}
                 >
-                  {selectedMatkul.includes(matkul.matkul_id) && (
+                  {isChecked(plo.plo_id, matkul.matkul_id) && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="w-4 h-4 text-white"
@@ -154,14 +173,12 @@ const AssessmentSet = () => {
         </button>
       </div>
 
-      {/* Modal Sukses */}
       <ModalSuccess
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         message={successMessage}
       />
 
-      {/* Modal Konfirmasi Reset */}
       <ModalDelete
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}

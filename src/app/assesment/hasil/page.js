@@ -8,18 +8,17 @@ import LoadingSpinner from "@/app/components/utilities/LoadingSpinner";
 
 const AssessmentPlan = () => {
   const [ploData, setPloData] = useState([]);
-  const [matkulData, setMatkulData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get("/api/assesment/hasil");
-        setPloData(response.data.ploData || []);
-        setMatkulData(response.data.selectedData || []);
+        const { data = [] } = response.data;
+        setPloData(data);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching assessment plan data:", error);
-      } finally {
         setLoading(false);
       }
     };
@@ -34,9 +33,6 @@ const AssessmentPlan = () => {
       </div>
     );
   }
-  if (loading) {
-    return <div className="text-center text-gray-500 p-4">Loading...</div>;
-  }
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
@@ -44,13 +40,13 @@ const AssessmentPlan = () => {
         Hasil Assessment Plan
       </h2>
 
-      {matkulData.length === 0 ? (
+      {ploData.length === 0 ? (
         <Alert.InfoAlert
           title="Belum ada mata kuliah yang diset."
           message="Silakan atur mata kuliah terlebih dahulu untuk melihat hasil assessment."
         />
       ) : (
-        <TableAssessment ploData={ploData} matkulData={matkulData} />
+        <TableAssessment ploData={ploData} />
       )}
     </div>
   );
