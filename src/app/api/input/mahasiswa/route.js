@@ -3,12 +3,10 @@ import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Handle POST request for adding Mahasiswa
 export async function POST(req) {
   try {
     const mahasiswaData = await req.json();
 
-    // Validasi jika data kosong
     if (!Array.isArray(mahasiswaData) || mahasiswaData.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada data mahasiswa yang dikirim." },
@@ -16,44 +14,26 @@ export async function POST(req) {
       );
     }
 
-    const createdMahasiswa = [];
-    const failedMahasiswa = [];
-
-    for (const mahasiswa of mahasiswaData) {
+    const prosesSemuaMahasiswa = mahasiswaData.map(async (mahasiswa) => {
       const { nim, nama, kode_kelas } = mahasiswa;
 
       try {
-        // Cari kelas berdasarkan kode_kelas
         const kelas = await prisma.tb_kelas.findUnique({
           where: { kode_kelas },
         });
 
         if (!kelas) {
-          failedMahasiswa.push({
-            nim,
-            nama,
-            kode_kelas,
-            error: `Kelas '${kode_kelas}' tidak ditemukan.`,
-          });
-          continue;
+          throw new Error(`Kelas '${kode_kelas}' tidak ditemukan.`);
         }
 
-        // Cek apakah NIM sudah terdaftar
         const existing = await prisma.tb_mahasiswa.findUnique({
           where: { nim_mahasiswa: String(nim) },
         });
 
         if (existing) {
-          failedMahasiswa.push({
-            nim,
-            nama,
-            kode_kelas,
-            error: `NIM '${nim}' sudah terdaftar.`,
-          });
-          continue;
+          throw new Error(`NIM '${nim}' sudah terdaftar.`);
         }
 
-        // Simpan ke DB
         const created = await prisma.tb_mahasiswa.create({
           data: {
             nim_mahasiswa: String(nim),
@@ -63,31 +43,47 @@ export async function POST(req) {
           },
         });
 
-        createdMahasiswa.push(created);
+        return { success: true, data: created };
       } catch (err) {
-        failedMahasiswa.push({
-          nim,
-          nama,
-          kode_kelas,
-          error: `Gagal menyimpan data: ${err.message}`,
-        });
+        return {
+          success: false,
+          data: {
+            nim,
+            nama,
+            kode_kelas,
+            error: err.message,
+          },
+        };
       }
-    }
+    });
+
+    // Jalankan semua secara paralel
+    const results = await Promise.allSettled(prosesSemuaMahasiswa);
+
+    const data_success = results
+      .filter((r) => r.status === "fulfilled" && r.value.success)
+      .map((r) => r.value.data);
+
+    const data_failed = results
+      .filter((r) => r.status === "fulfilled" && !r.value.success)
+      .map((r) => r.value.data);
 
     return NextResponse.json(
       {
         message: "Proses input mahasiswa selesai.",
-        success: createdMahasiswa.length,
-        failed: failedMahasiswa.length,
-        data_success: createdMahasiswa,
-        data_failed: failedMahasiswa,
+        success: data_success.length,
+        failed: data_failed.length,
+        data_success,
+        data_failed,
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("Error utama saat input mahasiswa:", error);
     return NextResponse.json(
-      { error: "Terjadi kesalahan pada server saat memproses data mahasiswa." },
+      {
+        error: "Terjadi kesalahan pada server saat memproses data mahasiswa.",
+      },
       { status: 500 }
     );
   }
