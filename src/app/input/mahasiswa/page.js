@@ -65,7 +65,7 @@ const InputMahasiswaKelas = () => {
           onClick={() =>
             handleSubmit(
               kelasMahasiswaData,
-              "/api/input/kelasMahasiswa",
+              "/api/input/kelas",
               "Kelas mahasiswa berhasil ditambahkan!",
               setKelasMahasiswaData,
               kelasInputRef

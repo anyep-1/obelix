@@ -1,23 +1,35 @@
-// prisma/seed.js
 const { PrismaClient } = require("@prisma/client");
+const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
 async function main() {
-  await prisma.tb_nilai_minimum.upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      nilai_minimum: 3.0,
-    },
+  const username = "admin";
+  const plainPassword = "admin123"; // Ganti jika perlu
+  const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+  const existingAdmin = await prisma.tb_user.findUnique({
+    where: { username },
   });
 
-  console.log("Nilai minimum berhasil diinisialisasi.");
+  if (!existingAdmin) {
+    await prisma.tb_user.create({
+      data: {
+        username,
+        password: hashedPassword,
+        role: "Admin",
+        nama: "Administrator",
+      },
+    });
+    console.log(`✅ Admin user created: ${username}`);
+  } else {
+    console.log(`ℹ️ Admin user already exists: ${username}`);
+  }
 }
 
 main()
   .catch((e) => {
-    console.error("Gagal menjalankan seed:", e);
+    console.error(e);
     process.exit(1);
   })
   .finally(() => {

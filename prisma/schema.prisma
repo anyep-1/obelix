@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,258 +8,284 @@ datasource db {
 }
 
 model tb_kurikulum {
-  kurikulum_id    Int    @id @default(autoincrement())
-  tahun_kurikulum String
-
-  // Relasi ke tb_profillulusan
-  tb_profillulusan tb_profillulusan[]
-
-  // Relasi ke tb_plo
-  tb_plo tb_plo[]
-
-  // Relasi ke tb_matkul
-  tb_matkul tb_matkul[]
-
+  kurikulum_id       Int                  @id @default(autoincrement())
+  tahun_kurikulum    String
+  tb_matkul          tb_matkul[]
+  tb_plo             tb_plo[]
+  tb_portofolio      tb_portofolio[]
+  tb_profillulusan   tb_profillulusan[]
   tb_template_rubrik tb_template_rubrik[]
-
-  tb_portofolio tb_portofolio[]
 }
 
 model tb_profillulusan {
-  profil_id        Int    @id @default(autoincrement())
-  deskripsi_profil String @db.VarChar(255)
+  profil_id        Int             @id @default(autoincrement())
+  deskripsi_profil String          @db.VarChar(1000)
   kurikulum_id     Int
-
-  // Relasi ke tb_kurikulum
-  tb_kurikulum tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
-
-  // Relasi ke tb_plo_profil
-  tb_plo_profil tb_plo_profil[]
+  tb_plo_profil    tb_plo_profil[]
+  tb_kurikulum     tb_kurikulum    @relation(fields: [kurikulum_id], references: [kurikulum_id])
 }
 
 model tb_plo {
-  plo_id       Int    @id @default(autoincrement())
-  nama_plo     String @db.VarChar(255)
-  kurikulum_id Int
-  nomor_plo    String? @db.VarChar(50)
-
-  // Relasi ke tb_kurikulum
-  tb_kurikulum tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
-
-  // Relasi ke tb_plo_profil
-  tb_plo_profil tb_plo_profil[]
-
-  tb_pi tb_pi[]
-
-  tb_clo tb_clo[]
-
+  plo_id             Int                  @id @default(autoincrement())
+  nama_plo           String               @db.VarChar(1000)
+  kurikulum_id       Int
+  nomor_plo          String?              @db.VarChar(50)
+  tb_clo             tb_clo[]
+  tb_pi              tb_pi[]
+  tb_kurikulum       tb_kurikulum         @relation(fields: [kurikulum_id], references: [kurikulum_id])
+  tb_plo_profil      tb_plo_profil[]
+  tb_skor_plo        tb_skor_plo?
   tb_template_rubrik tb_template_rubrik[]
-
-  tb_skor_plo tb_skor_plo[]
 }
 
 model tb_matkul {
-  matkul_id    Int    @id @default(autoincrement())
-  nama_matkul  String @db.VarChar(255)
-  kode_matkul  String @db.VarChar(11)
-  jumlah_sks   Int
-  kurikulum_id Int
-  tingkat      String @db.VarChar(50) // Kolom baru untuk tingkat
-  semester     String @db.VarChar(50) // Kolom baru untuk semester
-
-  // Relasi ke tb_kurikulum
-  tb_kurikulum tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
-
-  tb_clo tb_clo[]
-
+  matkul_id          Int                  @id @default(autoincrement())
+  nama_matkul        String               @db.VarChar(1000)
+  kode_matkul        String               @db.VarChar(11)
+  jumlah_sks         Int
+  kurikulum_id       Int
+  tingkat            String               @db.VarChar(50)
+  semester           String               @db.VarChar(50)
+  tb_clo             tb_clo[]
+  tb_kelas_dosen     tb_kelas_dosen[]
+  tb_kurikulum       tb_kurikulum         @relation(fields: [kurikulum_id], references: [kurikulum_id])
+  tb_monev           tb_monev[]
+  tb_nilai           tb_nilai[]
+  tb_portofolio      tb_portofolio[]
   tb_selected_matkul tb_selected_matkul[]
-
-  tb_kelas_dosen tb_kelas_dosen[]
-
   tb_template_rubrik tb_template_rubrik[]
-
-  tb_nilai tb_nilai[]
-
-  tb_monev tb_monev[]
-
-  tb_portofolio tb_portofolio[]
 }
 
-
 model tb_plo_profil {
-  id        Int @id @default(autoincrement())
-  plo_id    Int
-  profil_id Int
-
-  // Relasi ke tb_plo
-  tb_plo tb_plo @relation(fields: [plo_id], references: [plo_id])
-
-  // Relasi ke tb_profillulusan
+  id               Int              @id @default(autoincrement())
+  plo_id           Int
+  profil_id        Int
+  tb_plo           tb_plo           @relation(fields: [plo_id], references: [plo_id])
   tb_profillulusan tb_profillulusan @relation(fields: [profil_id], references: [profil_id])
 
-  @@unique([plo_id, profil_id]) // Untuk memastikan tidak ada duplikasi
+  @@unique([plo_id, profil_id])
 }
 
 model tb_pi {
-  pi_id        Int    @id @default(autoincrement())
-  deskripsi_pi String
-  plo_id       Int
-  nomor_pi     String? @db.VarChar(50)
-
-  tb_plo       tb_plo @relation(fields: [plo_id], references: [plo_id])
+  pi_id              Int                  @id @default(autoincrement())
+  deskripsi_pi       String
+  plo_id             Int
+  nomor_pi           String?              @db.VarChar(50)
+  tb_clo             tb_clo[]
+  tb_plo             tb_plo               @relation(fields: [plo_id], references: [plo_id])
+  tb_skor_pi         tb_skor_pi?
+  tb_template_rubrik tb_template_rubrik[]
 
   @@unique([plo_id, pi_id])
-  tb_clo tb_clo[]
-  tb_template_rubrik tb_template_rubrik[]
-  tb_skor_pi tb_skor_pi[]
 }
 
 model tb_clo {
-  clo_id      Int @id @default(autoincrement())
-  nama_clo    String @db.VarChar(255)
+  clo_id      Int           @id @default(autoincrement())
+  nama_clo    String        @db.VarChar(1000)
   plo_id      Int
   pi_id       Int
   matkul_id   Int
-  nomor_clo   String? @db.VarChar(50)
-
-  tb_plo       tb_plo @relation(fields: [plo_id], references: [plo_id])
-  tb_pi        tb_pi @relation(fields: [pi_id],references: [pi_id])
-  tb_matkul    tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
+  nomor_clo   String?       @db.VarChar(50)
+  tb_matkul   tb_matkul     @relation(fields: [matkul_id], references: [matkul_id])
+  tb_pi       tb_pi         @relation(fields: [pi_id], references: [pi_id])
+  tb_plo      tb_plo        @relation(fields: [plo_id], references: [plo_id])
+  tb_nilai    tb_nilai[]
+  tb_question tb_question[]
+  tb_skor_clo tb_skor_clo[]
 
   @@unique([plo_id, clo_id])
   @@unique([pi_id, clo_id])
   @@unique([matkul_id, clo_id])
-
-  tb_nilai tb_nilai[]
-  tb_question tb_question[]
-  tb_skor_clo tb_skor_clo[]
 }
 
 model tb_kelas_dosen {
-  kelas_dosen_id Int    @id @default(autoincrement())
-  tahun_akademik String @db.VarChar(50)
-  kelas          String @db.VarChar(50)
-
+  kelas_dosen_id Int       @id @default(autoincrement())
+  tahun_akademik String    @db.VarChar(50)
+  kelas          String    @db.VarChar(50)
   dosen_id       Int
   matkul_id      Int
-
-  tb_dosen       tb_dosen @relation(fields: [dosen_id], references: [dosen_id])
+  tb_dosen       tb_dosen  @relation(fields: [dosen_id], references: [dosen_id])
   tb_matkul      tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
 }
 
 model tb_dosen {
-  dosen_id   Int    @id @default(autoincrement())
-  nama_dosen String @db.VarChar(255)
-  kode_dosen String @db.VarChar(50) @unique
-
+  dosen_id       Int              @id @default(autoincrement())
+  nama_dosen     String           @db.VarChar(1000)
+  kode_dosen     String           @unique @db.VarChar(50)
   tb_kelas_dosen tb_kelas_dosen[]
 }
 
 model tb_mahasiswa {
-  mahasiswa_id Int    @id @default(autoincrement())
-  nama_mahasiswa String @db.VarChar(255)
-  nim_mahasiswa String @db.VarChar(50)
-  enroll_year   Int
-
-  kelas_id    Int
-
-  tb_nilai tb_nilai[]
-  tb_kelas    tb_kelas @relation(fields: [kelas_id], references: [kelas_id])
+  mahasiswa_id   Int        @id @default(autoincrement())
+  nama_mahasiswa String     @db.VarChar(1000)
+  nim_mahasiswa  String     @db.VarChar(50)
+  enroll_year    Int
+  kelas_id       Int
+  tb_kelas       tb_kelas   @relation(fields: [kelas_id], references: [kelas_id])
+  tb_nilai       tb_nilai[]
 }
 
 model tb_kelas {
-  kelas_id Int    @id @default(autoincrement())
-  kode_kelas String @db.VarChar(50)
-
-
-  tb_mahasiswa tb_mahasiswa[]
-
+  kelas_id      Int             @id @default(autoincrement())
+  kode_kelas    String          @db.VarChar(50)
+  tb_mahasiswa  tb_mahasiswa[]
   tb_portofolio tb_portofolio[]
 }
 
 model tb_question {
-  question_id Int    @id @default(autoincrement())
-  nama_question String @db.VarChar(255)
-
-  clo_id    Int
-  tool_id   Int
-
-  tb_nilai tb_nilai[]
-
-  tb_clo                    tb_clo @relation(fields: [clo_id], references: [clo_id])
-  tb_tools_assessment       tb_tools_assessment @relation(fields: [tool_id], references: [tool_id])
+  question_id         Int                 @id @default(autoincrement())
+  nama_question       String              @db.VarChar(1000)
+  clo_id              Int
+  tool_id             Int
+  tb_nilai            tb_nilai[]
+  tb_clo              tb_clo              @relation(fields: [clo_id], references: [clo_id])
+  tb_tools_assessment tb_tools_assessment @relation(fields: [tool_id], references: [tool_id])
 }
 
 model tb_tools_assessment {
-  tool_id   Int    @id @default(autoincrement())
-  nama_tools String @db.VarChar(255)
-
-
+  tool_id     Int           @id @default(autoincrement())
+  nama_tools  String        @db.VarChar(1000)
   tb_question tb_question[]
 }
 
 model tb_nilai {
-  nilai_id          Int    @id @default(autoincrement())
+  nilai_id           Int          @id @default(autoincrement())
   nilai_per_question Int
-  input_by           String @db.VarChar(255)
-  input_date         DateTime @default(now())
-
+  input_by           String       @db.VarChar(1000)
+  input_date         DateTime     @default(now())
   question_id        Int
   mahasiswa_id       Int
   clo_id             Int
   matkul_id          Int
-
-  tb_question        tb_question @relation(fields: [question_id], references: [question_id])
+  tb_clo             tb_clo       @relation(fields: [clo_id], references: [clo_id])
   tb_mahasiswa       tb_mahasiswa @relation(fields: [mahasiswa_id], references: [mahasiswa_id])
-  tb_clo             tb_clo @relation(fields: [clo_id],references: [clo_id])
-  tb_matkul          tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
+  tb_matkul          tb_matkul    @relation(fields: [matkul_id], references: [matkul_id])
+  tb_question        tb_question  @relation(fields: [question_id], references: [question_id])
 }
 
 model tb_selected_matkul {
-  id        Int     @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   matkul_id Int
-  selected  Boolean @default(false)
-
-  // Relasi ke tb_matkul
+  selected  Boolean   @default(false)
   tb_matkul tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
 }
 
 model tb_template_rubrik {
-  template_id      Int    @id @default(autoincrement())
+  template_id      Int           @id @default(autoincrement())
   kurikulum_id     Int
   matkul_id        Int
   plo_id           Int
   pi_id            Int
-  ta_semester      String  @db.VarChar(50)
+  ta_semester      String        @db.VarChar(50)
   dosen_pengampu   Json
-  objek_pengukuran String  @db.Text
-  rubrik_kategori  Json    // Simpan 4 kategori dalam satu kolom JSON
-  created_at       DateTime @default(now())
-
-  // Relasi ke tabel yang sudah ada
-  tb_kurikulum tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
-  tb_matkul tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
-  tb_plo tb_plo @relation(fields: [plo_id], references: [plo_id])
-  tb_pi tb_pi @relation(fields: [pi_id], references: [pi_id])
-
-  tb_skor_clo tb_skor_clo[]
+  objek_pengukuran String
+  rubrik_kategori  Json
+  created_at       DateTime      @default(now())
+  tb_skor_clo      tb_skor_clo[]
+  tb_kurikulum     tb_kurikulum  @relation(fields: [kurikulum_id], references: [kurikulum_id])
+  tb_matkul        tb_matkul     @relation(fields: [matkul_id], references: [matkul_id])
+  tb_pi            tb_pi         @relation(fields: [pi_id], references: [pi_id])
+  tb_plo           tb_plo        @relation(fields: [plo_id], references: [plo_id])
 }
 
 model tb_user {
-  user_id     Int       @id @default(autoincrement())
-  username    String    @unique @db.VarChar(50)
-  password    String    @db.VarChar(255)
-  nama        String    @db.VarChar(100) @default("Unknown")
+  user_id     Int        @id @default(autoincrement())
+  username    String     @unique @db.VarChar(50)
+  password    String     @db.VarChar(1000)
+  nama        String     @default("Unknown") @db.VarChar(1000)
   role        Role
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @default(now())
-
-  // Relasi ke Monev yang ditujukan ke user ini
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @default(now())
+  tb_monev    tb_monev[] @relation("UserPembuat")
   monevTujuan tb_monev[] @relation("UserMonev")
-
-  tb_monev tb_monev[] @relation("UserPembuat")
 }
 
+model tb_skor_clo {
+  id          Int                @id @default(autoincrement())
+  clo_id      Int
+  template_id Int
+  skor        Float
+  createdAt   DateTime           @default(now())
+  tb_clo      tb_clo             @relation(fields: [clo_id], references: [clo_id])
+  template    tb_template_rubrik @relation(fields: [template_id], references: [template_id])
+
+  @@unique([clo_id, template_id], name: "clo_id_template_id")
+}
+
+model tb_skor_pi {
+  id        Int      @id @default(autoincrement())
+  pi_id     Int      @unique
+  skor      Float
+  createdAt DateTime @default(now())
+  tb_pi     tb_pi    @relation(fields: [pi_id], references: [pi_id])
+
+  @@map("tb_skor_pi")
+}
+
+model tb_skor_plo {
+  id        Int      @id @default(autoincrement())
+  plo_id    Int      @unique
+  skor      Float
+  createdAt DateTime @default(now())
+  tb_plo    tb_plo   @relation(fields: [plo_id], references: [plo_id])
+
+  @@map("tb_skor_plo")
+}
+
+model tb_monev {
+  monev_id        Int       @id @default(autoincrement())
+  programStudi    String    @db.VarChar(100)
+  tanggalRTM      DateTime
+  tanggalMonev    DateTime
+  evaluasiPeriode String    @db.VarChar(100)
+  tujuanEvaluasi  String
+  metodeEvaluasi  String
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @default(now())
+  linkBukti       String?
+  userTujuanId    Int
+  userPembuatId   Int
+  matkul_id       Int
+  matkul          tb_matkul @relation(fields: [matkul_id], references: [matkul_id])
+  userPembuat     tb_user   @relation("UserPembuat", fields: [userPembuatId], references: [user_id])
+  userTujuan      tb_user   @relation("UserMonev", fields: [userTujuanId], references: [user_id])
+  rtList          tb_rt[]
+}
+
+model tb_rt {
+  rt_id                Int      @id @default(autoincrement())
+  deskripsiRT          String
+  statusImplementasi   String   @default("belum")
+  tanggalMulai         DateTime
+  tanggalSelesai       DateTime
+  analisisKetercapaian String
+  kendala              String
+  solusi               String
+  created_at           DateTime @default(now())
+  updated_at           DateTime @default(now())
+  monev_id             Int
+  monev                tb_monev @relation(fields: [monev_id], references: [monev_id])
+}
+
+model tb_portofolio {
+  id             Int          @id @default(autoincrement())
+  kurikulum_id   Int
+  tahun_akademik String
+  matkul_id      Int
+  kelas_id       Int
+  link_drive     String?
+  tb_kelas       tb_kelas     @relation(fields: [kelas_id], references: [kelas_id])
+  tb_kurikulum   tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
+  tb_matkul      tb_matkul    @relation(fields: [matkul_id], references: [matkul_id])
+
+  @@map("tb_portofolio")
+}
+
+model tb_nilai_minimum {
+  id            Int      @id @default(autoincrement())
+  nilai_minimum Float
+  updated_at    DateTime @default(now()) @updatedAt
+}
 
 enum Role {
   Admin
@@ -271,103 +294,4 @@ enum Role {
   DosenAmpu
   GugusKendaliMutu
   Evaluator
-}
-
-model tb_skor_clo {
-  id          Int       @id @default(autoincrement())
-  clo_id      Int
-  template_id Int 
-  skor        Float    
-  createdAt   DateTime  @default(now())
-
-  tb_clo      tb_clo    @relation(fields: [clo_id], references: [clo_id])
-  template tb_template_rubrik @relation(fields: [template_id], references: [template_id])
-
-  @@unique([clo_id, template_id], name: "clo_id_template_id")
-}
-
-model tb_skor_pi {
-  id          Int       @id @default(autoincrement())
-  pi_id       Int       @unique
-  skor        Float
-  createdAt   DateTime  @default(now())
-
-  tb_pi       tb_pi     @relation(fields: [pi_id], references: [pi_id])
-  
-  @@map("tb_skor_pi")
-}
-
-model tb_skor_plo {
-  id          Int       @id @default(autoincrement())
-  plo_id       Int       @unique
-  skor        Float
-  createdAt   DateTime  @default(now())
-
-  tb_plo       tb_plo    @relation(fields: [plo_id], references: [plo_id])
-  
-  @@map("tb_skor_plo")
-}
-
-model tb_monev {
-  monev_id           Int         @id @default(autoincrement())
-  programStudi       String      @db.VarChar(100)
-  tanggalRTM         DateTime
-  tanggalMonev       DateTime
-  evaluasiPeriode    String      @db.VarChar(100)
-  tujuanEvaluasi     String
-  metodeEvaluasi     String
-  created_at         DateTime    @default(now())
-  updated_at         DateTime    @default(now())
-  linkBukti          String?     @db.Text
-
-  userTujuanId       Int
-  userTujuan         tb_user     @relation("UserMonev", fields: [userTujuanId], references: [user_id])
-
-  userPembuatId      Int
-  userPembuat        tb_user     @relation("UserPembuat", fields: [userPembuatId], references: [user_id])
-
-  matkul_id          Int
-  matkul             tb_matkul   @relation(fields: [matkul_id], references: [matkul_id])
-
-  rtList             tb_rt[]
-}
-
-
-model tb_rt {
-  rt_id                 Int       @id @default(autoincrement())
-  deskripsiRT           String
-  statusImplementasi    String    @default("belum")
-  tanggalMulai          DateTime
-  tanggalSelesai        DateTime
-  analisisKetercapaian  String
-  kendala               String
-  solusi                String
-  created_at            DateTime  @default(now())
-  updated_at            DateTime  @default(now())
-
-  // Relasi ke Monev
-  monev_id              Int
-  monev                 tb_monev  @relation(fields: [monev_id], references: [monev_id])
-}
-
-model tb_portofolio {
-  id              Int      @id @default(autoincrement())
-  kurikulum_id    Int
-  tahun_akademik  String
-  matkul_id       Int
-  kelas_id        Int
-  link_drive      String?   // link Google Drive (optional)
-
-  // Relasi ke tabel lain
-  tb_kurikulum    tb_kurikulum @relation(fields: [kurikulum_id], references: [kurikulum_id])
-  tb_matkul       tb_matkul    @relation(fields: [matkul_id], references: [matkul_id])
-  tb_kelas        tb_kelas     @relation(fields: [kelas_id], references: [kelas_id])
-
-  @@map("tb_portofolio")  // jika mau sesuai nama tabel di DB
-}
-
-model tb_nilai_minimum {
-  id           Int      @id @default(autoincrement())
-  nilai_minimum Float
-  updated_at   DateTime @default(now()) @updatedAt
 }
