@@ -46,7 +46,7 @@ const templates = [
     name: "Template Data Tools Assesment",
     description:
       "Format untuk input data tools yang dipakai dalam assesment plan",
-    fileUrl: "/templates/templateToolsassesment.xlsx",
+    fileUrl: "/templates/templateToolsassessment.xlsx",
   },
 ];
 
