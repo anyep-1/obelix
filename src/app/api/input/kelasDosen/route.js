@@ -44,7 +44,7 @@ export async function POST(req) {
         // Tambahkan data kelas dosen ke database
         const createdKelasDosen = await prisma.tb_kelas_dosen.create({
           data: {
-            tahun_akademik,
+            tahun_akademik: String(tahun_akademik),
             kelas,
             dosen_id: dosen.dosen_id,
             matkul_id: matkul.matkul_id,
