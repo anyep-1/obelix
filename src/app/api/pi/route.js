@@ -19,8 +19,9 @@ export async function GET(req) {
         tb_skor_pi: true,
       },
     });
+    const sortedPi = pi.sort((a, b) => Number(a.nomor_pi) - Number(b.nomor_pi));
 
-    return NextResponse.json(pi);
+    return NextResponse.json(sortedPi);
   } catch (error) {
     console.error("Error fetching PI data:", error);
     return NextResponse.error(new Error("Failed to fetch data"));

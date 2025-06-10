@@ -10,7 +10,6 @@ export async function GET(request) {
     const piId = searchParams.get("pi_id");
 
     if (!piId) {
-      // Jika tidak ada pi_id, kembalikan semua CLO
       const allClo = await prisma.tb_clo.findMany({
         include: {
           tb_matkul: true,
@@ -22,7 +21,10 @@ export async function GET(request) {
           },
         },
       });
-      return NextResponse.json(allClo);
+      const sortedAllClo = allClo.sort(
+        (a, b) => Number(a.nomor_clo) - Number(b.nomor_clo)
+      );
+      return NextResponse.json(sortedAllClo);
     }
 
     const piIdInt = parseInt(piId, 10);

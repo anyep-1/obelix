@@ -38,6 +38,7 @@ export async function GET(req) {
     } else {
       plos = await prisma.tb_plo.findMany();
     }
+    plos = plos.sort((a, b) => Number(a.nomor_plo) - Number(b.nomor_plo));
 
     return new Response(JSON.stringify(plos), { status: 200 });
   } catch (error) {
