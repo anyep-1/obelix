@@ -19,6 +19,24 @@ const FileUploader = forwardRef(
     },
     ref
   ) => {
+    const validateAndSet = (data) => {
+      // Hapus baris yang tidak lengkap
+      const filtered = data.filter((item) =>
+        expectedHeaders.every(
+          (key) => item[key] !== undefined && item[key] !== ""
+        )
+      );
+
+      if (filtered.length === 0) {
+        onError("Semua baris kosong atau tidak lengkap. Cek file Anda.");
+        return;
+      }
+
+      console.log("✅ Baris valid:", filtered.length);
+      setData(filtered);
+      onError("");
+    };
+
     const parseExcel = (file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -26,13 +44,14 @@ const FileUploader = forwardRef(
         const workbook = XLSX.read(data, { type: "array" });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
         const headers = Object.keys(jsonData[0] || {});
         if (!expectedHeaders.every((h) => headers.includes(h))) {
           onError(`Invalid headers. Expected: ${expectedHeaders.join(", ")}`);
           return;
         }
-        onError("");
-        setData(jsonData);
+
+        validateAndSet(jsonData);
       };
       reader.onerror = () => onError("Gagal membaca file Excel.");
       reader.readAsArrayBuffer(file);
@@ -41,6 +60,7 @@ const FileUploader = forwardRef(
     const handleFileUpload = (event) => {
       const file = event.target.files[0];
       if (!file) return;
+
       const ext = file.name.split(".").pop().toLowerCase();
 
       if (ext === "csv") {
@@ -52,14 +72,15 @@ const FileUploader = forwardRef(
               onError("Error parsing CSV file.");
               return;
             }
+
             if (!expectedHeaders.every((h) => meta.fields.includes(h))) {
               onError(
                 `Invalid headers. Expected: ${expectedHeaders.join(", ")}`
               );
               return;
             }
-            onError("");
-            setData(data);
+
+            validateAndSet(data);
           },
         });
       } else if (ext === "xlsx") {

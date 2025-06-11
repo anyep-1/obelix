@@ -15,35 +15,35 @@ export async function POST(req) {
     }
 
     const expectedKeys = ["nama_question", "clo", "tools", "nama_matkul"];
-    for (const item of questions) {
-      for (const key of expectedKeys) {
-        if (!(key in item)) {
-          return NextResponse.json(
-            { error: `Kolom '${key}' tidak ditemukan pada salah satu baris.` },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
     const result = [];
+    const skipped = [];
 
     for (const item of questions) {
+      const missingKeys = expectedKeys.filter((key) => !(key in item));
+      if (missingKeys.length > 0) {
+        skipped.push({
+          item,
+          reason: `Kolom '${missingKeys.join(", ")}' tidak ditemukan.`,
+        });
+        continue;
+      }
+
       const { nama_question, clo, tools, nama_matkul } = item;
 
-      // Cari mata kuliah berdasarkan nama_matkul
+      // Cari mata kuliah
       const matkulRecord = await prisma.tb_matkul.findFirst({
-        where: { nama_matkul: nama_matkul },
+        where: { nama_matkul },
       });
 
       if (!matkulRecord) {
-        return NextResponse.json(
-          { error: `Mata kuliah '${nama_matkul}' tidak ditemukan.` },
-          { status: 400 }
-        );
+        skipped.push({
+          item,
+          reason: `Mata kuliah '${nama_matkul}' tidak ditemukan.`,
+        });
+        continue;
       }
 
-      // Cari CLO berdasarkan nomor_clo dan matkul_id
+      // Cari CLO
       const cloRecord = await prisma.tb_clo.findFirst({
         where: {
           nomor_clo: clo.toString(),
@@ -52,28 +52,28 @@ export async function POST(req) {
       });
 
       if (!cloRecord) {
-        return NextResponse.json(
-          {
-            error: `CLO nomor '${clo}' untuk mata kuliah '${nama_matkul}' tidak ditemukan.`,
-          },
-          { status: 400 }
-        );
+        skipped.push({
+          item,
+          reason: `CLO nomor '${clo}' untuk matkul '${nama_matkul}' tidak ditemukan.`,
+        });
+        continue;
       }
 
-      // Cari tools berdasarkan nama_tools
+      // Cari Tools
       const toolRecord = await prisma.tb_tools_assessment.findFirst({
         where: { nama_tools: tools },
       });
 
       if (!toolRecord) {
-        return NextResponse.json(
-          { error: `Tool '${tools}' tidak ditemukan.` },
-          { status: 400 }
-        );
+        skipped.push({
+          item,
+          reason: `Tools '${tools}' tidak ditemukan.`,
+        });
+        continue;
       }
 
-      // Cek duplikat pertanyaan
-      const existingQuestion = await prisma.tb_question.findFirst({
+      // Cek duplikat
+      const existing = await prisma.tb_question.findFirst({
         where: {
           nama_question,
           clo_id: cloRecord.clo_id,
@@ -81,12 +81,15 @@ export async function POST(req) {
         },
       });
 
-      if (existingQuestion) {
-        console.log(`Pertanyaan '${nama_question}' sudah ada. Melewati...`);
-        continue; // lewati jika sudah ada
+      if (existing) {
+        skipped.push({
+          item,
+          reason: `Pertanyaan '${nama_question}' sudah ada.`,
+        });
+        continue;
       }
 
-      // Simpan pertanyaan baru
+      // Simpan
       const saved = await prisma.tb_question.create({
         data: {
           nama_question,
@@ -98,7 +101,15 @@ export async function POST(req) {
       result.push(saved);
     }
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        inserted: result.length,
+        skipped: skipped.length,
+        skippedItems: skipped,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Gagal menyimpan data pertanyaan:", error);
     return NextResponse.json(

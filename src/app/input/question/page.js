@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react";
 import axios from "axios";
-import { UploadCloud } from "lucide-react";
 import FileUploader from "@/app/components/planCom/FileUploader";
 import Alert from "@/app/components/utilities/Alert";
 
@@ -10,6 +9,7 @@ const InputQuestion = () => {
   const [questionData, setQuestionData] = useState([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [skippedItems, setSkippedItems] = useState([]);
   const fileInputRef = useRef(null);
 
   const expectedHeaders = ["nama_question", "clo", "tools", "nama_matkul"];
@@ -18,23 +18,40 @@ const InputQuestion = () => {
     if (!questionData.length) {
       setError("Data kosong. Upload file terlebih dahulu.");
       setSuccess("");
+      setSkippedItems([]);
       return;
     }
+
     try {
       const res = await axios.post("/api/input/question", questionData);
       if (res.status === 201) {
-        setSuccess("Pertanyaan berhasil ditambahkan!");
+        const { inserted, skipped, skippedItems } = res.data;
+        let message = `✅ ${inserted} pertanyaan berhasil ditambahkan.`;
+        if (skipped > 0) {
+          message += `\n❌ ${skipped} pertanyaan dilewati.`;
+        }
+
+        setSuccess(message);
         setError("");
+        setSkippedItems(skippedItems || []);
         setQuestionData([]);
         if (fileInputRef.current) fileInputRef.current.value = null;
       } else {
         setError(res.data?.error || "Gagal mengirim data.");
         setSuccess("");
+        setSkippedItems([]);
       }
-    } catch {
+    } catch (err) {
+      console.error("ERR:", err?.response?.data || err.message);
       setError("Kesalahan saat mengirim data.");
       setSuccess("");
+      setSkippedItems([]);
     }
+  };
+
+  const handleCloseSuccess = () => {
+    setSuccess("");
+    // ⛔ Jangan reset skippedItems agar tetap ditampilkan
   };
 
   return (
@@ -70,8 +87,25 @@ const InputQuestion = () => {
       {error && (
         <Alert.ErrorAlert message={error} onClose={() => setError("")} />
       )}
+
       {success && (
-        <Alert.SuccessAlert message={success} onClose={() => setSuccess("")} />
+        <Alert.SuccessAlert message={success} onClose={handleCloseSuccess} />
+      )}
+
+      {skippedItems.length > 0 && (
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md text-sm text-yellow-800">
+          <h4 className="font-semibold mb-2">Data yang tidak masuk:</h4>
+          <ul className="list-disc list-inside space-y-1">
+            {skippedItems.map((item, index) => (
+              <li key={index}>
+                <span className="font-medium text-gray-800">
+                  {item.item?.nama_question || "Pertanyaan tidak diketahui"}
+                </span>{" "}
+                — {item.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
