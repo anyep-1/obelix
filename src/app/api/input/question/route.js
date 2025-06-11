@@ -15,27 +15,47 @@ export async function POST(req) {
     }
 
     const expectedKeys = ["nama_question", "clo", "tools", "nama_matkul"];
-    const result = [];
     const skipped = [];
+    const toInsert = [];
+
+    // Ambil semua data pendukung
+    const [allMatkul, allClo, allTools, allExisting] = await Promise.all([
+      prisma.tb_matkul.findMany(),
+      prisma.tb_clo.findMany(),
+      prisma.tb_tools_assessment.findMany(),
+      prisma.tb_question.findMany({
+        select: {
+          nama_question: true,
+          clo_id: true,
+          tool_id: true,
+        },
+      }),
+    ]);
+
+    // Buat peta untuk lookup cepat
+    const matkulMap = new Map(allMatkul.map((m) => [m.nama_matkul, m]));
+    const cloMap = new Map(
+      allClo.map((c) => [`${c.matkul_id}_${c.nomor_clo}`, c])
+    );
+    const toolsMap = new Map(allTools.map((t) => [t.nama_tools, t]));
+    const existingSet = new Set(
+      allExisting.map((e) => `${e.nama_question}_${e.clo_id}_${e.tool_id}`)
+    );
 
     for (const item of questions) {
-      const missingKeys = expectedKeys.filter((key) => !(key in item));
-      if (missingKeys.length > 0) {
+      const missing = expectedKeys.filter((key) => !(key in item));
+      if (missing.length > 0) {
         skipped.push({
           item,
-          reason: `Kolom '${missingKeys.join(", ")}' tidak ditemukan.`,
+          reason: `Kolom '${missing.join(", ")}' tidak ditemukan.`,
         });
         continue;
       }
 
       const { nama_question, clo, tools, nama_matkul } = item;
 
-      // Cari mata kuliah
-      const matkulRecord = await prisma.tb_matkul.findFirst({
-        where: { nama_matkul },
-      });
-
-      if (!matkulRecord) {
+      const matkul = matkulMap.get(nama_matkul);
+      if (!matkul) {
         skipped.push({
           item,
           reason: `Mata kuliah '${nama_matkul}' tidak ditemukan.`,
@@ -43,45 +63,23 @@ export async function POST(req) {
         continue;
       }
 
-      // Cari CLO
-      const cloRecord = await prisma.tb_clo.findFirst({
-        where: {
-          nomor_clo: clo.toString(),
-          matkul_id: matkulRecord.matkul_id,
-        },
-      });
-
-      if (!cloRecord) {
+      const cloObj = cloMap.get(`${matkul.matkul_id}_${clo}`);
+      if (!cloObj) {
         skipped.push({
           item,
-          reason: `CLO nomor '${clo}' untuk matkul '${nama_matkul}' tidak ditemukan.`,
+          reason: `CLO '${clo}' untuk matkul '${nama_matkul}' tidak ditemukan.`,
         });
         continue;
       }
 
-      // Cari Tools
-      const toolRecord = await prisma.tb_tools_assessment.findFirst({
-        where: { nama_tools: tools },
-      });
-
-      if (!toolRecord) {
-        skipped.push({
-          item,
-          reason: `Tools '${tools}' tidak ditemukan.`,
-        });
+      const toolObj = toolsMap.get(tools);
+      if (!toolObj) {
+        skipped.push({ item, reason: `Tools '${tools}' tidak ditemukan.` });
         continue;
       }
 
-      // Cek duplikat
-      const existing = await prisma.tb_question.findFirst({
-        where: {
-          nama_question,
-          clo_id: cloRecord.clo_id,
-          tool_id: toolRecord.tool_id,
-        },
-      });
-
-      if (existing) {
+      const key = `${nama_question}_${cloObj.clo_id}_${toolObj.tool_id}`;
+      if (existingSet.has(key)) {
         skipped.push({
           item,
           reason: `Pertanyaan '${nama_question}' sudah ada.`,
@@ -89,22 +87,25 @@ export async function POST(req) {
         continue;
       }
 
-      // Simpan
-      const saved = await prisma.tb_question.create({
-        data: {
-          nama_question,
-          clo_id: cloRecord.clo_id,
-          tool_id: toolRecord.tool_id,
-        },
+      toInsert.push({
+        nama_question,
+        clo_id: cloObj.clo_id,
+        tool_id: toolObj.tool_id,
       });
+    }
 
-      result.push(saved);
+    // Simpan sekaligus
+    if (toInsert.length > 0) {
+      await prisma.tb_question.createMany({
+        data: toInsert,
+        skipDuplicates: true,
+      });
     }
 
     return NextResponse.json(
       {
         success: true,
-        inserted: result.length,
+        inserted: toInsert.length,
         skipped: skipped.length,
         skippedItems: skipped,
       },
