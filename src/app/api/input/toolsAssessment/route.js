@@ -3,39 +3,76 @@ import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-// Handle POST request for adding tools
 export async function POST(req) {
   try {
     const toolsData = await req.json();
 
-    // Validasi jika data kosong
-    if (!toolsData || toolsData.length === 0) {
+    if (!Array.isArray(toolsData) || toolsData.length === 0) {
       return NextResponse.json(
         { error: "Tidak ada data tools yang dikirim." },
         { status: 400 }
       );
     }
 
-    // Proses setiap tools dalam array
-    const toolsPromises = toolsData.map(async (tool) => {
+    // Ambil semua tools eksisting untuk menghindari duplikasi
+    const existingTools = await prisma.tb_tools_assessment.findMany({
+      select: { nama_tools: true },
+    });
+    const existingSet = new Set(
+      existingTools.map((t) => t.nama_tools.toLowerCase())
+    );
+
+    const toolsToInsert = [];
+    const data_failed = [];
+
+    for (const tool of toolsData) {
       const { nama_tools } = tool;
 
-      // Tambahkan tools ke database
-      return prisma.tb_tools_assessment.create({
-        data: {
-          nama_tools,
-        },
+      if (!nama_tools || nama_tools.trim() === "") {
+        data_failed.push({
+          ...tool,
+          error: "Nama tools tidak boleh kosong.",
+        });
+        continue;
+      }
+
+      if (existingSet.has(nama_tools.toLowerCase())) {
+        data_failed.push({
+          ...tool,
+          error: `Tools '${nama_tools}' sudah ada.`,
+        });
+        continue;
+      }
+
+      toolsToInsert.push({ nama_tools });
+      existingSet.add(nama_tools.toLowerCase()); // Tambahkan agar tidak duplikat dalam batch
+    }
+
+    let insertedCount = 0;
+    if (toolsToInsert.length > 0) {
+      const result = await prisma.tb_tools_assessment.createMany({
+        data: toolsToInsert,
+        skipDuplicates: true,
       });
-    });
+      insertedCount = result.count;
+    }
 
-    // Tunggu semua tools selesai diproses
-    const result = await Promise.all(toolsPromises);
-
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(
+      {
+        message: "Proses input tools selesai.",
+        inserted: insertedCount,
+        skipped: data_failed.length,
+        data_success: toolsToInsert,
+        data_failed,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating tools:", error);
     return NextResponse.json(
-      { error: error.message || "Gagal menambahkan tools." },
+      {
+        error: error.message || "Gagal menambahkan tools.",
+      },
       { status: 500 }
     );
   }

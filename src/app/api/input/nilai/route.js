@@ -28,98 +28,109 @@ export async function POST(req) {
       );
     }
 
-    const hasilSimpan = [];
-    const skippedItems = [];
+    // Ambil semua mahasiswa, matkul, clo, dan question sekaligus
+    const [allMahasiswa, allMatkul, allCLO, allQuestions] = await Promise.all([
+      prisma.tb_mahasiswa.findMany({
+        select: { mahasiswa_id: true, nim_mahasiswa: true },
+      }),
+      prisma.tb_matkul.findMany({
+        select: { matkul_id: true, kode_matkul: true },
+      }),
+      prisma.tb_clo.findMany({
+        select: { clo_id: true, nomor_clo: true, matkul_id: true },
+      }),
+      prisma.tb_question.findMany({
+        select: { question_id: true, nama_question: true, clo_id: true },
+      }),
+    ]);
+
+    // Buat Map pencarian cepat
+    const mhsMap = new Map(
+      allMahasiswa.map((m) => [m.nim_mahasiswa, m.mahasiswa_id])
+    );
+    const matkulMap = new Map(
+      allMatkul.map((m) => [m.kode_matkul, m.matkul_id])
+    );
+    const cloMap = new Map(
+      allCLO.map((c) => [`${c.nomor_clo}-${c.matkul_id}`, c.clo_id])
+    );
+    const questionMap = new Map(
+      allQuestions.map((q) => [`${q.nama_question}-${q.clo_id}`, q.question_id])
+    );
+
+    const toInsert = [];
+    const skipped = [];
 
     for (const item of data) {
       const { nim, kode_matkul, nilai, clo, question } = item;
 
-      // Cari mahasiswa
-      const mahasiswa = await prisma.tb_mahasiswa.findFirst({
-        where: { nim_mahasiswa: nim?.toString() },
-      });
-      if (!mahasiswa) {
-        skippedItems.push({
+      const mahasiswa_id = mhsMap.get(nim?.toString());
+      const matkul_id = matkulMap.get(kode_matkul);
+      const cloKey = `${clo}-${matkul_id}`;
+      const clo_id = cloMap.get(cloKey);
+      const questionKey = `${question}-${clo_id}`;
+      const question_id = questionMap.get(questionKey);
+
+      if (!mahasiswa_id) {
+        skipped.push({ item, reason: `Mahasiswa NIM ${nim} tidak ditemukan.` });
+        continue;
+      }
+
+      if (!matkul_id) {
+        skipped.push({
           item,
-          reason: `Mahasiswa dengan NIM ${nim} tidak ditemukan.`,
+          reason: `Matkul kode ${kode_matkul} tidak ditemukan.`,
         });
         continue;
       }
 
-      // Cari mata kuliah
-      const matkul = await prisma.tb_matkul.findFirst({
-        where: { kode_matkul },
-      });
-      if (!matkul) {
-        skippedItems.push({
+      if (!clo_id) {
+        skipped.push({
           item,
-          reason: `Mata kuliah dengan kode ${kode_matkul} tidak ditemukan.`,
+          reason: `CLO ${clo} untuk matkul ${kode_matkul} tidak ditemukan.`,
         });
         continue;
       }
 
-      // Cari CLO
-      const cloData = await prisma.tb_clo.findFirst({
-        where: {
-          nomor_clo: clo,
-          matkul_id: matkul.matkul_id,
-        },
-      });
-      if (!cloData) {
-        skippedItems.push({
+      if (!question_id) {
+        skipped.push({
           item,
-          reason: `CLO "${clo}" tidak ditemukan.`,
+          reason: `Question "${question}" untuk CLO ${clo} tidak ditemukan.`,
         });
         continue;
       }
 
-      // Cari soal / question
-      const soal = await prisma.tb_question.findFirst({
-        where: {
-          nama_question: question,
-          clo_id: cloData.clo_id,
-        },
-      });
-      if (!soal) {
-        skippedItems.push({
+      if (nilai === undefined || nilai === null || isNaN(nilai)) {
+        skipped.push({
           item,
-          reason: `Question "${question}" tidak ditemukan.`,
+          reason: `Nilai tidak valid untuk mahasiswa ${nim}.`,
         });
         continue;
       }
 
-      // Simpan nilai
-      const saved = await prisma.tb_nilai.create({
-        data: {
-          nilai_per_question: parseFloat(nilai),
-          input_by: inputBy,
-          question_id: soal.question_id,
-          mahasiswa_id: mahasiswa.mahasiswa_id,
-          clo_id: cloData.clo_id,
-          matkul_id: matkul.matkul_id,
-        },
+      toInsert.push({
+        nilai_per_question: parseFloat(nilai),
+        input_by: inputBy,
+        question_id,
+        mahasiswa_id,
+        clo_id,
+        matkul_id,
       });
-
-      hasilSimpan.push(saved);
     }
 
-    if (hasilSimpan.length === 0) {
-      return NextResponse.json(
-        {
-          error: "Tidak ada data nilai yang berhasil disimpan.",
-          skipped: skippedItems.length,
-          skippedItems,
-        },
-        { status: 400 }
-      );
+    if (toInsert.length > 0) {
+      await prisma.tb_nilai.createMany({
+        data: toInsert,
+        skipDuplicates: true, // agar tidak error kalau duplikat
+      });
     }
 
     return NextResponse.json(
       {
-        message: "Data nilai berhasil disimpan.",
-        inserted: hasilSimpan.length,
-        skipped: skippedItems.length,
-        skippedItems,
+        message: "Data nilai berhasil diproses.",
+        inserted: toInsert.length,
+        skipped: skipped.length,
+        skippedItems: skipped,
       },
       { status: 201 }
     );
