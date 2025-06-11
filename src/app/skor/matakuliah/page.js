@@ -17,7 +17,15 @@ const HitungSkor = () => {
     const fetchTemplates = async () => {
       try {
         const response = await axios.get("/api/templateRubrik/getTemplate");
-        setTemplates(response.data.templates || []);
+
+        const fetchedTemplates = response.data.templates || [];
+
+        console.log(
+          "Fetched Templates:",
+          JSON.stringify(fetchedTemplates, null, 2)
+        );
+
+        setTemplates(fetchedTemplates);
       } catch (error) {
         console.error("Error fetching templates:", error);
       }
@@ -105,11 +113,18 @@ const HitungSkor = () => {
           required
         >
           <option value="">-- Pilih Mata Kuliah --</option>
-          {templates.map((template) => (
-            <option key={template.template_id} value={template.template_id}>
-              {template.matkul} - {template.kurikulum}
-            </option>
-          ))}
+          {templates.map((template) => {
+            const cloText = template?.clo?.length
+              ? ` | CLO: ${template.clo.join(", ")}`
+              : "";
+
+            return (
+              <option key={template.template_id} value={template.template_id}>
+                {template.matkul} - {template.kurikulum}
+                {cloText}
+              </option>
+            );
+          })}
         </Select>
       </div>
 

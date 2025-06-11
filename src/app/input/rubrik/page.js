@@ -27,10 +27,9 @@ const SetRubrik = () => {
     kurikulum: [],
     matkul: [],
     plo: [],
-    pi: [],
     dosen: [],
   });
-  const [submittedData, setSubmittedData] = useState(null);
+  const [piByPlo, setPiByPlo] = useState({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
@@ -56,7 +55,6 @@ const SetRubrik = () => {
         ...prev,
         matkul: data.matkul,
         plo: [],
-        pi: [],
         dosen: [],
       }));
       setFormData((prev) => ({
@@ -77,12 +75,32 @@ const SetRubrik = () => {
         `/api/input/rubrik?matkul=${encodeURIComponent(namaMatkul)}`
       );
       const data = await res.json();
+
+      // Mapping PI by PLO
+      const groupedPi = {};
+      data.pi.forEach((pi) => {
+        const ploId = pi.plo_id;
+        if (!groupedPi[ploId]) groupedPi[ploId] = [];
+        groupedPi[ploId].push(pi);
+      });
+
+      // Urutkan PLO dan PI berdasarkan nomor
+      const sortedPlo = data.plo.sort((a, b) => a.nomor_plo - b.nomor_plo);
+      for (const key in groupedPi) {
+        groupedPi[key] = groupedPi[key].sort((a, b) => {
+          const getNum = (str) => parseFloat(str.replace(",", "."));
+          return getNum(a.nomor_pi) - getNum(b.nomor_pi);
+        });
+      }
+
       setOptions((prev) => ({
         ...prev,
-        plo: data.plo,
-        pi: data.pi,
+        plo: sortedPlo,
         dosen: data.dosen,
       }));
+
+      setPiByPlo(groupedPi);
+
       setFormData((prev) => ({
         ...prev,
         plo: "",
@@ -90,7 +108,7 @@ const SetRubrik = () => {
         dosen_pengampu: [],
       }));
     } catch (error) {
-      console.error("Error fetching PLO, PI, dan dosen:", error);
+      console.error("Error fetching PLO, PI, dosen:", error);
     }
   };
 
@@ -135,20 +153,17 @@ const SetRubrik = () => {
         formData
       );
 
-      if (response.status !== 200) {
+      if (response.status !== 200)
         throw new Error("Gagal menyimpan template rubrik");
-      }
 
-      setSubmittedData(response.data.template);
       setFormData(initialFormData);
       setOptions((prev) => ({
         ...prev,
         matkul: [],
         plo: [],
-        pi: [],
         dosen: [],
       }));
-
+      setPiByPlo({});
       setShowSuccessModal(true);
     } catch (error) {
       console.error("Error saat menyimpan template rubrik:", error);
@@ -156,9 +171,7 @@ const SetRubrik = () => {
     }
   };
 
-  const handleCloseModal = () => {
-    setShowSuccessModal(false);
-  };
+  const handleCloseModal = () => setShowSuccessModal(false);
 
   const formFields = [
     {
@@ -197,12 +210,12 @@ const SetRubrik = () => {
       name: "pi",
       label: "PI",
       type: "select",
-      options: options.pi.map((pi) => ({
+      options: (piByPlo?.[formData.plo] || []).map((pi) => ({
         value: pi.pi_id,
         label: `PI ${pi.nomor_pi}`,
       })),
       required: true,
-      disabled: !formData.matkul,
+      disabled: !formData.plo,
     },
     {
       name: "dosen_pengampu",

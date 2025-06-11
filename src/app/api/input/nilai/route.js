@@ -44,27 +44,42 @@ export async function POST(req) {
       }),
     ]);
 
-    // Buat Map pencarian cepat
+    // Normalisasi dan buat Map pencarian cepat
+    const normalize = (str) =>
+      typeof str === "string"
+        ? str.trim().replace(/\s+/g, "").toLowerCase()
+        : String(str).trim().replace(/\s+/g, "").toLowerCase();
+
     const mhsMap = new Map(
-      allMahasiswa.map((m) => [m.nim_mahasiswa, m.mahasiswa_id])
+      allMahasiswa.map((m) => [normalize(m.nim_mahasiswa), m.mahasiswa_id])
     );
+
     const matkulMap = new Map(
-      allMatkul.map((m) => [m.kode_matkul, m.matkul_id])
+      allMatkul.map((m) => [normalize(m.kode_matkul), m.matkul_id])
     );
+
     const cloMap = new Map(
-      allCLO.map((c) => [`${c.nomor_clo}-${c.matkul_id}`, c.clo_id])
+      allCLO.map((c) => [`${normalize(c.nomor_clo)}-${c.matkul_id}`, c.clo_id])
     );
+
     const questionMap = new Map(
-      allQuestions.map((q) => [`${q.nama_question}-${q.clo_id}`, q.question_id])
+      allQuestions.map((q) => [
+        `${normalize(q.nama_question)}-${q.clo_id}`,
+        q.question_id,
+      ])
     );
 
     const toInsert = [];
     const skipped = [];
 
     for (const item of data) {
-      const { nim, kode_matkul, nilai, clo, question } = item;
+      const nim = normalize(item.nim);
+      const kode_matkul = normalize(item.kode_matkul);
+      const clo = normalize(item.clo);
+      const question = normalize(item.question);
+      const nilai = item.nilai;
 
-      const mahasiswa_id = mhsMap.get(nim?.toString());
+      const mahasiswa_id = mhsMap.get(nim);
       const matkul_id = matkulMap.get(kode_matkul);
       const cloKey = `${clo}-${matkul_id}`;
       const clo_id = cloMap.get(cloKey);
@@ -72,14 +87,17 @@ export async function POST(req) {
       const question_id = questionMap.get(questionKey);
 
       if (!mahasiswa_id) {
-        skipped.push({ item, reason: `Mahasiswa NIM ${nim} tidak ditemukan.` });
+        skipped.push({
+          item,
+          reason: `Mahasiswa NIM ${item.nim} tidak ditemukan.`,
+        });
         continue;
       }
 
       if (!matkul_id) {
         skipped.push({
           item,
-          reason: `Matkul kode ${kode_matkul} tidak ditemukan.`,
+          reason: `Matkul kode ${item.kode_matkul} tidak ditemukan.`,
         });
         continue;
       }
@@ -87,7 +105,7 @@ export async function POST(req) {
       if (!clo_id) {
         skipped.push({
           item,
-          reason: `CLO ${clo} untuk matkul ${kode_matkul} tidak ditemukan.`,
+          reason: `CLO ${item.clo} untuk matkul ${item.kode_matkul} tidak ditemukan.`,
         });
         continue;
       }
@@ -95,7 +113,7 @@ export async function POST(req) {
       if (!question_id) {
         skipped.push({
           item,
-          reason: `Question "${question}" untuk CLO ${clo} tidak ditemukan.`,
+          reason: `Question "${item.question}" untuk CLO ${item.clo} tidak ditemukan.`,
         });
         continue;
       }
@@ -103,7 +121,7 @@ export async function POST(req) {
       if (nilai === undefined || nilai === null || isNaN(nilai)) {
         skipped.push({
           item,
-          reason: `Nilai tidak valid untuk mahasiswa ${nim}.`,
+          reason: `Nilai tidak valid untuk mahasiswa ${item.nim}.`,
         });
         continue;
       }
@@ -121,7 +139,7 @@ export async function POST(req) {
     if (toInsert.length > 0) {
       await prisma.tb_nilai.createMany({
         data: toInsert,
-        skipDuplicates: true, // agar tidak error kalau duplikat
+        skipDuplicates: true,
       });
     }
 

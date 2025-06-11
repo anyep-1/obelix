@@ -15,7 +15,16 @@ export const GET = async (req) => {
           tb_kurikulum: { select: { tahun_kurikulum: true } },
           tb_matkul: { select: { nama_matkul: true } },
           tb_plo: { select: { nama_plo: true } },
-          tb_pi: { select: { deskripsi_pi: true } },
+          tb_pi: {
+            select: {
+              deskripsi_pi: true,
+              tb_clo: {
+                select: {
+                  nomor_clo: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -40,7 +49,16 @@ export const GET = async (req) => {
           tb_kurikulum: { select: { tahun_kurikulum: true } },
           tb_matkul: { select: { nama_matkul: true } },
           tb_plo: { select: { nama_plo: true } },
-          tb_pi: { select: { deskripsi_pi: true } },
+          tb_pi: {
+            select: {
+              deskripsi_pi: true,
+              tb_clo: {
+                select: {
+                  nomor_clo: true,
+                },
+              },
+            },
+          },
         },
       });
 
@@ -90,13 +108,14 @@ const formatTemplate = (template) => {
     matkul: template.tb_matkul.nama_matkul,
     plo: template.tb_plo.nama_plo,
     pi: template.tb_pi.deskripsi_pi,
+    clo: template.tb_pi?.tb_clo?.map((clo) => clo.nomor_clo) || [],
     ta_semester: template.ta_semester,
     dosen_pengampu:
       typeof template.dosen_pengampu === "string"
         ? JSON.parse(template.dosen_pengampu)
         : template.dosen_pengampu,
     objek_pengukuran: template.objek_pengukuran,
-    kategori, // Mengembalikan dalam format array seperti input
+    kategori,
     created_at: template.created_at,
     updated_at: template.updated_at,
   };
